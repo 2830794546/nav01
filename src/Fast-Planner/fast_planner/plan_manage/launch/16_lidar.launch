@@ -1,0 +1,116 @@
+<launch>
+  <!-- size of map, change the size in x, y, z according to your application -->
+  <arg name="map_size_x" value="40.0"/>
+  <arg name="map_size_y" value="40.0"/>
+  <arg name="map_size_z" value="0.5 "/>
+
+
+  <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find plan_manage)/config/traj.rviz" />
+
+  <!-- topic of your odometry such as VIO or LIO -->
+  <arg name="odom_topic" value="/odom" />
+
+  <!-- main algorithm params -->
+  <include file="$(find plan_manage)/launch/lidar.xml">
+
+    <arg name="map_size_x_" value="$(arg map_size_x)"/>
+    <arg name="map_size_y_" value="$(arg map_size_y)"/>
+    <arg name="map_size_z_" value="$(arg map_size_z)"/>
+    <arg name="odometry_topic" value="$(arg odom_topic)"/>
+
+    <!-- camera pose: transform of camera frame in the world frame -->
+    <!-- depth topic: depth image, 640x480 by default -->
+    <!-- don't set cloud_topic if you already set these ones! -->
+    <arg name="camera_pose_topic" value="/pcl_render_node/camera_pose_null"/><!--geometry_msgs::PoseStamped-->
+    <arg name="depth_topic" value="/pcl_render_node/depth_null"/>
+
+    <!-- topic of point cloud measurement, such as from LIDAR  -->
+    <!-- don't set camera pose and depth, if you already set this one! -->
+    <arg name="cloud_topic" value="/laserPointCloud"/>
+
+    <!-- intrinsic params of the depth camera -->
+    <arg name="cx" value="321.04638671875"/>
+    <arg name="cy" value="243.44969177246094"/>
+    <arg name="fx" value="387.229248046875"/>
+    <arg name="fy" value="387.229248046875"/>
+
+    <!-- maximum velocity and acceleration the drone will reach -->
+    <arg name="max_vel" value="3" />
+    <arg name="max_acc" value="1.5" />
+
+    <!-- 1: use 2D Nav Goal to select goal  -->
+    <!-- 2: use global waypoints below  -->
+    <arg name="flight_type" value="1" />
+    
+    <!-- global waypoints -->
+    <!-- If flight_type is set to 2, the drone will travel these waypoints one by one -->
+    <arg name="point_num" value="3" />
+
+    <arg name="point0_x" value="2" />
+    <arg name="point0_y" value="0" />
+    <arg name="point0_z" value="0" />
+
+    <!-- set more waypoints if you need -->
+    <arg name="point1_x" value="2" />
+    <arg name="point1_y" value="-5" />
+    <arg name="point1_z" value="0" />
+
+    <arg name="point2_x" value="5.0" />
+    <arg name="point2_y" value="-10.0" />
+    <arg name="point2_z" value="0.0" />
+    
+  </include>
+
+  <!-- trajectory server -->
+  <node pkg="plan_manage" name="traj_server" type="traj_server" output="screen">
+    <remap from="/position_cmd" to="planning/pos_cmd"/>
+
+    <remap from="/odom_world" to="$(arg odom_topic)"/>
+    <param name="traj_server/time_forward" value="1.5" type="double"/>
+  </node>
+
+  <node pkg="waypoint_generator" name="waypoint_generator" type="waypoint_generator" output="screen">
+    <remap from="~odom" to="$(arg odom_topic)"/>        
+    <remap from="~goal" to="/move_base_simple/goal"/>
+    <remap from="~traj_start_trigger" to="/traj_start_trigger" />
+    <param name="waypoint_type" value="manual-lonely-waypoint"/>    
+  </node>
+
+        <!--  location -->
+     <node pkg="amcl" type="amcl" name="amcl" output="screen">
+        <!-- Publish scans from best pose at a max of 10 Hz -->
+        <param name="odom_model_type" value="diff"/>
+        <param name="odom_alpha5" value="0.1"/>
+        <param name="gui_publish_rate" value="10.0"/>
+        <param name="laser_max_beams" value="30"/>
+        <param name="min_particles" value="500"/>
+        <param name="max_particles" value="5000"/>
+        <param name="kld_err" value="0.05"/>
+        <param name="kld_z" value="0.99"/>
+        <param name="odom_alpha1" value="0.2"/>
+        <param name="odom_alpha2" value="0.2"/>
+        <!-- translation std dev, m -->
+        <param name="odom_alpha3" value="0.8"/>
+        <param name="odom_alpha4" value="0.2"/>
+        <param name="laser_z_hit" value="0.5"/>
+        <param name="laser_z_short" value="0.05"/>
+        <param name="laser_z_max" value="0.05"/>
+        <param name="laser_z_rand" value="0.5"/>
+        <param name="laser_sigma_hit" value="0.2"/>
+        <param name="laser_lambda_short" value="0.1"/>
+        <param name="laser_model_type" value="likelihood_field"/>
+        <!-- <param name="laser_model_type" value="beam"/> -->
+        <param name="laser_likelihood_max_dist" value="2.0"/>
+        <param name="update_min_d" value="0.2"/>
+        <param name="update_min_a" value="0.5"/>
+
+        <param name="odom_frame_id" value="odom"/>
+        <param name="base_frame_id" value="base_footprint"/><!-- 添加机器人基坐标系 -->
+        
+        <param name="resample_interval" value="1"/>
+        <param name="transform_tolerance" value="0.1"/>
+        <param name="recovery_alpha_slow" value="0.0"/>
+        <param name="recovery_alpha_fast" value="0.0"/>
+    </node>
+ 
+</launch>

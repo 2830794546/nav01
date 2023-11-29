@@ -1,0 +1,8 @@
+<launch>
+    <include file="$(find plan_manage)/launch/16_lidar.launch"/>
+    <include file="$(find gazebo_demo_0)/launch/urdf01_gazebo.launch"/>
+    <node pkg="mpc_tracking" type="mpc_node" name ="mpc_node" output="screen" respawn="true"/>
+    <!-- <node pkg="lidar2world" type="transform" name ="transform" output="screen" respawn="true"/> -->
+      <node pkg="lidar2world" type="scan_2_point_could.py" name="laserPointCloud"/>
+
+</launch>
